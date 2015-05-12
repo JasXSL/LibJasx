@@ -6,7 +6,7 @@
 // JavaScript Document
 // function callback((obj)this){}
 function Ajax(method, args, callback){
-	this.task = task;
+	this.task = method;
 	this.args = args;
 	this.success = false;
 	this.response = null;
