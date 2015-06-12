@@ -29,6 +29,9 @@ class DB4{
 	protected function onInsertPre(){				// Optional
 		//$this->dateadded = time();
 	}
+	protected function onDeletePre(){
+		
+	}
 // CLONE END
 	
 	function __construct($id = 0){					// Obvious construct is obvious
@@ -44,8 +47,12 @@ class DB4{
 	static function MQ($query, array $vars = array()){
 		$call = static::$PDO->prepare($query);
 		$bt = debug_backtrace();
-		$bt = array_shift($bt);
-		$debug = ' @ '.$bt['file'].' '.$bt['line'];
+		$backtrace = array();
+		foreach($bt as $key=>$val){
+			if(isset($val['file']) && isset($val['line']))
+				$backtrace[] = $val['file'].'.ln'.$val['line'];
+		}
+		$debug = ' @ '.implode($backtrace, ' &lt;- ');
 		$call->execute($vars)or die(print_r($call->errorInfo(), true).$debug);
 		return $call;
 	}
@@ -66,19 +73,22 @@ class DB4{
 	}
 	
 	// query -> get assoc - Returns an array of all results
-	static function QGA($query, array $vars = array()){
+	static function QGA($query, $vars = array()){
+		$vars = (array)$vars;
 		$call = static::MQ($query, $vars);
 		return $call->fetchAll(PDO::FETCH_ASSOC);
 	}
 	
 	// query -> get single assoc
-	static function QGS($query, array $vars = array()){
+	static function QGS($query, $vars = array()){
+		$vars = (array)$vars;
 		$call = static::MQ($query, $vars);
 		return $call->fetch(PDO::FETCH_ASSOC);
 	}
 	
 	// query -> get objects / all
-	static function QGOA($query, array $vars = array()){
+	static function QGOA($query, $vars = array()){
+		$vars = (array)$vars;
 		$q = self::QGA($query, $vars);
 		if($q === false)return array();
 		$out = array();
@@ -91,7 +101,8 @@ class DB4{
 	}
 	
 	// query -> get objects / single
-	static function QGOS($query, array $vars = array()){
+	static function QGOS($query, $vars = array()){
+		$vars = (array)$vars;
 		$arr = self::QGS($query, $vars);
 		if($arr === false)return false;
 		$obj = new static;
@@ -122,6 +133,7 @@ class DB4{
 	
 	// Delete this object from mysql
 	public function delete(){
+		$this->onDeletePre();
 		return static::MAR(static::MQ("DELETE FROM ".static::$table." WHERE id=?", array((int)$this->id)));
 	}
 	
@@ -162,6 +174,12 @@ class DB4{
 		return $data;
 	}
 	
+	static function a2q(array $input){
+		$out = array();
+		foreach($input as $key=>$val)$out[] = "?";
+		return $out;
+	}
+	
 	private function typeToForm($var){
 		if(is_numeric($v))return 'number';
 		if(is_array($v) || strlen($var)>100)return 'textarea';
@@ -175,7 +193,7 @@ class DB4{
 	// freetext = just put the text in inputName field
 	// br = rowbreak
 	public function buildStdForm($action = '', array $inputs, $add = ''){
-		$out = '<form id="'.get_class($this).'Editor" method="POST" '.($action ? 'action="'.$action.'" ' : '').'>';
+		$out = '<form enctype="multipart/form-data" id="'.get_class($this).'Editor" method="POST" '.($action ? 'action="'.$action.'" ' : '').'>';
 		
 		foreach($inputs as $val){
 			$inputType = strtolower(array_shift($val));
