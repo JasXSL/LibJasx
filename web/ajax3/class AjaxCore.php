@@ -13,18 +13,29 @@
 		protected static function postInit(){
 			
 		}
-		
+		// Required method
+		protected static function validateCSRF($CSRF){
+			Tools::addError("CSRF needs to be set up");
+			return false;
+		}
 
 		
-		public static function init(){
+		static function init(){
 			if(!isset($_GET['t'])){
+				self::$vals = "TASK_ERROR";
 				Tools::addError("Unable to load JSON. Task missing.");
-				return false;
+				self::finish(false);
 			}
-			if(isset($_GET['csrf']) && $_GET['csrf'] != $_SESSION['CSRF_TOKEN']){
-				Tools::addError("Invalid CSRF");
-				return false;
+			
+			$csrf = '';
+			if(isset($_GET['csrf']))$csrf = $_GET['csrf'];
+			if(!static::validateCSRF($csrf)){
+				self::$vals = "CSRF_ERROR";
+				Tools::addError("CSRF fail in AJAX");
+				self::finish(false);
 			}
+			
+
 			self::$task = $_GET['t'];
 			
 			if(isset($_GET['d']))self::$data = (array)json_decode($_GET['d'], true);
@@ -52,15 +63,15 @@
 			return true;
 		}
 		
-		public static function setVals($vals){
+		static function setVals($vals){
 			self::$vals = $vals;
 		}
 		
-		public static function setRedir($redir){
+		static function setRedir($redir){
 			self::$redir = $redir;
 		}
 		
-		public static function finish($success = false){
+		static function finish($success = false){
 			header('Content-Type: application/json');
 			$output = array(
 				"vars" => self::$vals,
