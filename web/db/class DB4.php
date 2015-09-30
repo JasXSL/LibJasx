@@ -44,8 +44,10 @@ class DB4{
 	}
 	
 // SQL methods
-	static function MQ($query, array $vars = array()){
-		$call = static::$PDO->prepare($query);
+	static function MQ($query, $vars = array(), $pdo = NULL){
+		if($pdo === NULL)$pdo = static::$PDO;
+		
+		$call = $pdo->prepare($query);
 		$bt = debug_backtrace();
 		$backtrace = array();
 		foreach($bt as $key=>$val){
@@ -53,13 +55,14 @@ class DB4{
 				$backtrace[] = $val['file'].'.ln'.$val['line'];
 		}
 		$debug = ' @ '.implode($backtrace, ' &lt;- ');
-		$call->execute($vars)or die(print_r($call->errorInfo(), true).$debug);
+		$call->execute($vars)or die("MYSQL ERROR <br />".print_r($call->errorInfo(), true).$debug);
 		return $call;
 	}
 	
 	// MysqlInsertID Last insert id
-	static function MII(){
-		return static::$PDO->lastInsertId();
+	static function MII($pdo = NULL){
+		if($pdo === NULL)$pdo = static::$PDO;
+		return $pdo->lastInsertId();
 	}
 	
 	// Mysql Affected Rows
@@ -73,23 +76,23 @@ class DB4{
 	}
 	
 	// query -> get assoc - Returns an array of all results
-	static function QGA($query, $vars = array()){
+	static function QGA($query, $vars = array(), $pdo = NULL){
 		$vars = (array)$vars;
-		$call = static::MQ($query, $vars);
+		$call = static::MQ($query, $vars, $pdo);
 		return $call->fetchAll(PDO::FETCH_ASSOC);
 	}
 	
 	// query -> get single assoc
-	static function QGS($query, $vars = array()){
+	static function QGS($query, $vars = array(), $pdo = NULL){
 		$vars = (array)$vars;
-		$call = static::MQ($query, $vars);
+		$call = static::MQ($query, $vars, $pdo);
 		return $call->fetch(PDO::FETCH_ASSOC);
 	}
 	
 	// query -> get objects / all
-	static function QGOA($query, $vars = array()){
+	static function QGOA($query, $vars = array(), $pdo = NULL){
 		$vars = (array)$vars;
-		$q = self::QGA($query, $vars);
+		$q = self::QGA($query, $vars, $pdo);
 		if($q === false)return array();
 		$out = array();
 		foreach($q as $val){
@@ -101,17 +104,17 @@ class DB4{
 	}
 	
 	// query -> get objects / single
-	static function QGOS($query, $vars = array()){
+	static function QGOS($query, $vars = array(), $pdo = NULL){
 		$vars = (array)$vars;
-		$arr = self::QGS($query, $vars);
+		$arr = self::QGS($query, $vars, $pdo);
 		if($arr === false)return false;
 		$obj = new static;
 		$obj->load($arr);
 		return $obj;
 	}
 	// quickly Check if an ID exists
-	static function idExists($id){
-		$call = static::MQ("SELECT id FROM ".static::$table." WHERE id=? LIMIT 1", array((int)$id));
+	static function idExists($id, $pdo = NULL){
+		$call = static::MQ("SELECT id FROM ".static::$table." WHERE id=? LIMIT 1", array((int)$id), $pdo);
 		return static::MNR($call);
 	}
 
@@ -178,6 +181,9 @@ class DB4{
 		$out = array();
 		foreach($input as $key=>$val)$out[] = "?";
 		return $out;
+	}
+	static function q(array $input){
+		return self::a2q($input);
 	}
 	
 	private function typeToForm($var){
@@ -276,7 +282,7 @@ class DB4{
 	// such as $user->save(array("name"=>"Jasdac")); which will insert a new row with name as jasdac
 	// after which all vars set in your class will be saved
 	// default behavior is to convert empty strings to mysql NULL, you can override that with setting $emptyToNull to false
-	public function save(array $fieldsOnCreate = array(), $emptyToNull = true){
+	public function save(array $fieldsOnCreate = array(), $emptyToNull = true, $echo_query = false){
 		if($this->id == 0){
 			$qs = array();
 			if(empty($fieldsOnCreate)){return false;}
@@ -306,13 +312,15 @@ class DB4{
 				if(is_array($v) || is_object($v))$v = json_encode($v);
 				if($v != $val){
 					$op[$key] = $v;
-					$set[] = $key.'=:'.$key;
+					$set[] = '`'.$key.'`=:'.$key;
 				}
 			}
 		}
 		if(!count($set))return false;
 		$q = "UPDATE ".static::$table." SET ".implode(',',$set)." WHERE id=:id";
 		$op[':id'] = $this->id;
+		
+		if($echo_query)echo $q;
 		$query = static::MQ($q, $op);
 		$success = static::MAR($query);
 		$this->onDataPostSave();
