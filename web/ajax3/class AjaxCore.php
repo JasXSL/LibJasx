@@ -31,7 +31,7 @@
 			if(isset($_GET['csrf']))$csrf = $_GET['csrf'];
 			if(!static::validateCSRF($csrf)){
 				self::$vals = "CSRF_ERROR";
-				Tools::addError("CSRF fail in AJAX");
+				Tools::addError("CSRF fail in AJAX. Got: ".$csrf); 
 				self::finish(false);
 			}
 			
@@ -64,11 +64,23 @@
 		}
 		
 		static function setVals($vals){
-			self::$vals = $vals;
+			if(!is_array($vals) && !is_object($vals)){
+				self::$vals = $vals;
+				return;
+			}
+			
+			foreach($vals as $key=>$val){
+				self::$vals[$key] = $val;
+			}
 		}
 		
-		static function setRedir($redir){
-			self::$redir = $redir;
+		static function setVal($key, $val){
+			self::$vals[$key] = $val;
+		}
+		
+		static function setRedir($redir, $blank = false){
+			if($blank)self::$redir = array($redir, true);
+			else self::$redir = $redir;
 		}
 		
 		static function finish($success = false){

@@ -16,10 +16,13 @@ function Ajax(task, data, form, callback, overrideErrors){
     this.url = Ajax.url;
     this.overrideErrors = overrideErrors;
     
-    if(window.FormData === undefined)console.log("Browser does not support file uploads.");
+    if(window.FormData === undefined){
+    	console.log("Browser does not support file uploads.");
+    }
     else{
-    	if(!this.form instanceof FormData)
+    	if(!this.form instanceof FormData){
     		this.form = new FormData($(this.form)[0]);
+        }
     }
 	
     
@@ -33,29 +36,62 @@ function Ajax(task, data, form, callback, overrideErrors){
         processData:false,
         type:'POST'
 	}).always(function(d){
+    	var i;
+        
+        //console.log(me, d);
+        
 		me.response = d;
-        //console.log(d);
 		if(d.hasOwnProperty("succ")){
-        	//console.log(d);
-            
-            
-            if(Ajax.overrideAllErrors !== null)Ajax.overrideAllErrors(d.err, d.note);
+            if(Ajax.overrideAllErrors !== null){
+            	Ajax.overrideAllErrors(d.err, d.note);
+            }
             else if(me.overrideErrors !== undefined){
             	overrideErrors(d.err, d.note);
             }
             else{
-               	if(d.err.length)addErrors(d.err.join('<br />'), true);
-                if(d.note.length)addErrors(d.note.join('<br />'), false);
-                if(d.err.length || d.note.length)$("html, body").animate({ scrollTop: 0 }, "slow");
+               	if(d.err.length){
+                	addErrors(d.err.join('<br />'), true);
+                }
+                if(d.note.length){
+                	addErrors(d.note.join('<br />'), false);
+                }
+                if(d.err.length || d.note.length){
+                	$("html, body").animate({ scrollTop: 0 }, "slow");
+                }
 			}
             
-            if(d.redir)window.location = d.redir;
+            
+            if(d.redir !== false){
+            	console.log(d.redir);
+            	var url = d.redir;
+                var blank = false;
+                if(typeof url !== "string" && url.length>1){
+                	blank = url[1];
+                    url = url[0];
+                }
+                
+                if(!blank){
+                	window.location = d.redir;
+                }
+                else{
+                	window.open(url, '_blank');
+                }
+            }
             
             me.response = d.vars;
-			if(d.succ)me.success = true;
-		}else console.log("Ajax failure", me);
-        if(me !== undefined && callback !== undefined)callback(me);
-        for(var i in Ajax.onSuccessFunctions)Ajax.onSuccessFunctions[i](me);
+			if(d.succ){
+            	me.success = true;
+            }
+		}else{
+         	console.log("Ajax failure", me);
+        }
+        
+        if(callback !== undefined){
+        	callback.apply(me, [me]);
+        }
+        for(i = 0; i<Ajax.onSuccessFunctions.length; i++){
+        	Ajax.onSuccessFunctions[i].apply(me, [me]);
+        }
 	}).fail(function(data){
 		console.log("AJAX Fail: ");
 		console.log(data);
@@ -70,7 +106,10 @@ Ajax.overrideAllErrors = null;
 
 Ajax.setConf = function(url, onSuccessFunctions){
 	Ajax.url = url;
-    if(onSuccessFunctions !== undefined)Ajax.onSuccessFunctions = onSuccessFunctions;
+    if(onSuccessFunctions !== undefined){
+    	if(onSuccessFunctions.constructor !== Array){onSuccessFunctions = [onSuccessFunctions];}
+    	Ajax.onSuccessFunctions = onSuccessFunctions;
+    }
 }
 Ajax.bindOnSuccessFunction = function(fn){
 	Ajax.onSuccessFunctions.push(fn);
@@ -83,4 +122,3 @@ Ajax.bindErrorOverride = function(fn){
 
 	session_write_close();
 
-?>
