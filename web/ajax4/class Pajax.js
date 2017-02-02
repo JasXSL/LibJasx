@@ -40,6 +40,11 @@ function Pajax(url, csrf, onError, onSuccesses){
 		this.onSuccesses = [this.onSuccesses];
 	}
 	
+	this.onSyntaxError = function(data){
+		console.log("Ajax SYNTAX ERROR", data); 
+	};
+	
+	
 	this.Call = function(task, data, form, callback){
 		var me = this;
 		
@@ -57,13 +62,15 @@ function Pajax(url, csrf, onError, onSuccesses){
 		
 		
 		
+		
 		// Auto
 		this.response = {};
 		this.time = Date.now();		// Timestamp 
 		this.success = false;
 		this.parent = parent;
 		this.promise = null;
-
+		
+		
 		
 		this.form.append("_AJAX_DATA", JSON.stringify(this.data));
 
@@ -80,7 +87,10 @@ function Pajax(url, csrf, onError, onSuccesses){
 				
 				
 				// Failed response
-				if(!d.hasOwnProperty("succ")){console.log("Ajax SYNTAX ERROR", d); return;}
+				if(!d.hasOwnProperty("succ")){
+					parent.onSyntaxError(d);
+					return;
+				}
 				
 				// Successful response
 				if(d.succ){me.success = true;}
@@ -128,7 +138,7 @@ function Pajax(url, csrf, onError, onSuccesses){
 					parent.onSuccesses[i].call(me, vars);
 				}
 				
-				suc(me);
+				suc.call(me, me);
 			});
 		});
 	};

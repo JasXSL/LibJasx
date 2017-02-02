@@ -40,7 +40,11 @@
 			
 			if(isset($_GET['d']))self::$data = (array)json_decode($_GET['d'], true);
 			
-			if(!static::preInit())continue;
+			
+			if(!static::preInit()){
+				Tools::addError("PreInit failed!");
+				return self::finish(false);
+			}
 			
 			if(!method_exists(get_called_class(), 'pub'.self::$task)){
 				Tools::addError("Method does not exist: pub".htmlspecialchars(self::$task));
